@@ -11,7 +11,6 @@ gdown==3.12.2
 h11==0.12.0
 idna==2.10
 lxml==4.6.3
-mega==0.2.11
 mega.py==1.0.8
 numpy==1.20.2
 outcome==1.1.0
@@ -26,6 +25,7 @@ six==1.15.0
 sniffio==1.2.0
 sortedcontainers==2.3.0
 soupsieve==2.2.1
+termgraph
 tenacity==5.1.5
 tqdm==4.60.0
 trio==0.18.0
