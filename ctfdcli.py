@@ -5,18 +5,26 @@ from ctfdAPI import ctfdapi
 from cprint import ok, err, warn, info
 from multiprocessing.pool import ThreadPool
 import pandas as pd
-import _thread
 import argparse
+import logging
+import _thread
 import json
 import sys
 import os
+
+
+logger = logging.getLogger('root')
+FORMAT = "[ %(filename)s:%(lineno)s - %(funcName)s() ] %(message)s"
+# logging.basicConfig(format=FORMAT)
+logging.basicConfig(filename='logger.log', filemode='w', format=FORMAT)
+logger.setLevel(logging.INFO)
 
 CHECK = lambda fname : os.path.exists(fname)
 CURRDIR = os.path.dirname(os.path.realpath('__file__'))
 COMMAND = [
     'login','logout','scoreboard','challenges','select',
     'submit','scraping','download','clear','help','close'
-    ]
+]
 
 class tmux:
     def __init__(self, pname, position, size):
@@ -61,7 +69,7 @@ class tmux:
 
             _,L = os.get_terminal_size()
             os.system("! {} select-pane -D; {} resize-pane -U {}".format(tmux, tmux, L-2))
-            print(ok("Done!"))
+            print(ok("[+] Done!"))
             return list_tty
         except Exception as e:
             print(err(e))
@@ -191,7 +199,7 @@ def posinput(msg='Command'):
 
 def arghandler():
     parser = argparse.ArgumentParser(description='CTFd-cli', prog='ctfdcli', usage='%(prog)s -h [options]')
-    parser.add_argument('url',  metavar='url', type=str, help='CTFd platform url')
+    parser.add_argument('url',  metavar='url', type=str, help='example: http://ctf.chall.com')
     parser.add_argument('user', metavar='user', type=str, help='Username/email')
     parser.add_argument('passwd', metavar='passwd', type=str, help='Password')
     parser.add_argument('-n', '--interval', type=int, nargs='?', default=1000, help='Scraping every N seconds. default=1000')   

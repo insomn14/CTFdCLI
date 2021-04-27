@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 
+from cprint import ok, err, warn, info
 from mega import Mega
 import gdown
 import wget
-from cprint import ok, err, warn, info
 import re
 import os
 
