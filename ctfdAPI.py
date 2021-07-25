@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 from pathlib import Path
 from cprint import ok, err, warn, info
 from mega import Mega
+from log import logging
 import pandas as pd
 import requests
 import gdown
@@ -19,8 +20,10 @@ class ctfdapi:
         self.auth       = dict(name=args.user, password=args.passwd)
         self.session    = requests.Session()
         self.__setup()
+        logging.info("Initial ctfdapi")
 
     def __setup(self):
+        logging.info("Call ctfdapi.__setup")
         self.check      = lambda fname : os.path.exists(fname)
         self.CURRDIR   = os.path.dirname(os.path.realpath('__file__'))
 
@@ -42,6 +45,7 @@ class ctfdapi:
             Path(self.CURRDIR + '/.hide/challenges.csv').touch()
 
     def submit_flag(self, flag, cate, chal, chal_id):
+        logging.info("Call Method ctfdapi.submit_flag")
         filename = os.path.join(self.CURRDIR,cate,chal,'flag.txt')
         new_headers = {
             'Accept': 'application/json',
@@ -59,6 +63,7 @@ class ctfdapi:
         return ok(f'[+] Message : {status["data"]["message"]}')
 
     def login(self):
+        logging.info("Call Method ctfdapi.login")
         if (not self.lstatus):
             data = self.session.get(self.login_url, headers=self.headers)
             soup = BeautifulSoup(data.text, 'lxml')
@@ -78,6 +83,7 @@ class ctfdapi:
         return warn('[!] Your already login')
 
     def logout(self):
+        logging.info("Call Method ctfdapi.logout")
         if (self.lstatus):
             if ('CSRF-Token' in self.headers): self.headers.pop('CSRF-Token')
             new_headers = { 'Content-Type': 'application/x-www-form-urlencoded' }
@@ -90,35 +96,47 @@ class ctfdapi:
 
     def __get_id(self, link):
         data = pd.read_json(self.session.get(link).content)
-        id = [ch['id'] for ch in data.data]
+        id = sorted([ch['id'] for ch in data.data])
+        logging.info(f"GET CHALL ID: {id}")
         return id
 
     def __get_hints(self, hints_id):
+        logging.info(f"GET CHALL HINT_ID : {hint_id}")
         recv = pd.read_json(self.session.get(f'{self.hint_url}/{hints_id}').text).data
         if ('content' in recv.keys()):
             return recv.content
         return f'Need cost point atleast : {recv.cost}'
 
     def get_challenges(self):
+        logging.info("Call Method ctfdapi.get_challenges")
         if (self.lstatus):
-            if ('CSRF-Token' in self.headers): self.headers.pop('CSRF-Token')
+            if ('CSRF-Token' in self.headers):
+                self.headers.pop('CSRF-Token')
             filename = f'{self.CURRDIR}/.hide/challenges.csv'
             id_chals = self.__get_id(self.chall_url)
             key = ['attempts', 'category', 'description', 'files',
                     'hints', 'id', 'name', 'solves', 'value']
             challenges = pd.DataFrame(columns=key)
             for ids in id_chals:
-                recv = pd.read_json(self.session.get(f'{self.chall_url}/{ids}').content)['data']
-                if (len(recv.hints) != 0):
-                    hdata = []
-                    for hid in recv.hints:
-                        hdata.append(self.__get_hints(hid['id']))
-                    recv.hints = '\n'.join(hdata)
-                challenges = challenges.append({k:recv[k] for k in key}, ignore_index=True)
+                try:
+                    # recv = pd.read_json(self.session.get(f'{self.chall_url}/{ids}').content)['data']
+                    recv = self.session.get(f'{self.chall_url}/{ids}')
+                    logging.info(f'STATUS : {recv.status_code} - {self.chall_url}/{ids}')
+                    recv = pd.read_json(recv.content)['data']
+                    if (len(recv.hints) != 0):
+                        hdata = []
+                        for hid in recv.hints:
+                            hdata.append(self.__get_hints(hid['id']))
+                        recv.hints = '\n'.join(hdata)
+                    challenges = challenges.append({k:recv[k] for k in key}, ignore_index=True)
+                except Exception as e:
+                    logging.info(f"{e}")
+                    pass
             self._write_to_csv(challenges, filename)
             return ok('[*] Successfully scraping challenges')
 
     def get_scoreboard(self):
+        logging.info("Call Method ctfdapi.get_scoreboard")
         filename = f'{self.CURRDIR}/.hide/scoreboard.csv'
         if ('CSRF-Token' in self.headers): self.headers.pop('CSRF-Token')
         key = ['pos', 'name', 'score']
@@ -133,6 +151,7 @@ class ctfdapi:
         new_dataframe.to_csv(filename, index=False)
 
     def download(self, num, name, category, links=None):
+        logging.info("Call Method ctfdapi.download")
         platform = ['CTFd','GDRIVE','MEGA']
         outfile = f'{self.CURRDIR}/{category}/{name}/'
         if (platform[int(num)]):

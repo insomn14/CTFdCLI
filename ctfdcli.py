@@ -4,20 +4,13 @@ from time import sleep
 from ctfdAPI import ctfdapi
 from cprint import ok, err, warn, info
 from multiprocessing.pool import ThreadPool
+from log import logging
 import pandas as pd
 import argparse
-import logging
 import _thread
 import json
 import sys
 import os
-
-
-logger = logging.getLogger('root')
-FORMAT = "[ %(filename)s:%(lineno)s - %(funcName)s() ] %(message)s"
-# logging.basicConfig(format=FORMAT)
-logging.basicConfig(filename='logger.log', filemode='w', format=FORMAT)
-logger.setLevel(logging.INFO)
 
 CHECK = lambda fname : os.path.exists(fname)
 CURRDIR = os.path.dirname(os.path.realpath('__file__'))
@@ -31,6 +24,7 @@ class tmux:
         self.pname      = pname
         self.position   = position
         self.size       = size
+        logging.info("Initial Class TEMUX")
 
     def _which(self, program):
         """Locate a command on the filesystem."""
@@ -80,8 +74,10 @@ class challenges:
         self.pty        = pty
         self.task       = set()
         self.filename   = os.path.join(CURRDIR,'.hide/challenges.csv')
+        logging.info("Initial Class Challenges")
 
     def _readme(self, chall):
+        logging.info("Call Method challenges._readme")
         name   = chall.name.values[0]
         cate   = chall.category.values[0]
         points = chall.value.values[0]
@@ -104,12 +100,14 @@ class challenges:
             f.close()
 
     def _ptask(self, chall):
+        logging.info("Call Method challenges._ptask")
         keys = ['id','name','value','description','hints','files']
         cont = ''.join(f'\r[{k.upper()}]: {info(chall[k].values[0])}\n' for k in keys).replace('`', '')
         command = 'clear > {}; echo "{}" > {}'.format(self.pty, cont, self.pty)
         os.system(command)
 
     def select(self, cate, chal):
+        logging.info("Call Method challenges.select")
         if self.task != set():
             if cate in self.task.keys() and chal < len(self.task[cate]):
                 challs = self.dataset.loc[ self.dataset.name == self.task[cate][chal] ]
@@ -117,11 +115,12 @@ class challenges:
                 _thread.start_new_thread( self._readme, (challs,) )
                 return challs.category.values[0], challs.name.values[0], int(challs.id)
             else:
-                logging(err('[!] Enter the correct category/challenges number'), self.pty)
+                logger(err('[!] Enter the correct category/challenges number'), self.pty)
         else:
-            logging(err('[!] Enter command \'challenges\' first'), self.pty)
+            logger(err('[!] Enter command \'challenges\' first'), self.pty)
 
     def _pchall(self, cate):
+        logging.info("Call Method challenges._pchall")
         cont = ''
         for ct in cate.keys():
             cont += '\n[{}] {}'.format(ct+1, warn(cate[ct]))
@@ -137,21 +136,24 @@ class challenges:
 
     def show(self):
         try:
+            logging.info("Call Method challenges.show")
             self.dataset = pd.read_csv(self.filename)
             lcate = self.dataset.category.unique()
             cate = {i:ct for i,ct in enumerate(lcate)}
             self.task = {i:list(self.dataset.loc[self.dataset.category == lc].name) for i,lc in enumerate(lcate)}
             self._pchall(cate)
         except Exception as e:
-            logging(err(e), self.pty)
+            logger(err(e), self.pty)
 
 class scoreboard:
     def __init__(self, pty):
         self.pty        = pty
         self.filename   = os.path.join(CURRDIR,'.hide/scoreboard.csv')
+        logging.info('Initial Class Scoreboard')
 
     def show(self, num=20):
         try:
+            logging.info("Call Method scoreboard.show")
             self.dataset = pd.read_csv(self.filename).drop(columns='pos')
             cont = '\n'.join(f'{n},{s}' for n,s in zip( list(self.dataset.name[:num]), list(self.dataset.score[:num]) ))
             command = '''
@@ -159,13 +161,14 @@ class scoreboard:
             '''.format(self.pty, cont, self.pty)
             os.system(command)
         except Exception as e:
-            logging(err(e), self.pty)
+            logger(err(e), self.pty)
 
-def logging(msg, pty):
+def logger(msg, pty):
     command = 'clear > {} ; echo "{}" > {}'.format(pty, msg, pty)
     os.system(command)
 
 def help(pty):
+    logging.info(f"Initial HELP!!!")
     cont = '''Command :
     - login         : login to ctfd platform
     - logout        : logout to ctfd platform
@@ -181,7 +184,7 @@ def help(pty):
     - clear         : Clear all panel
     - close         : Exit program
     - help          : Help'''
-    return logging(ok(cont), pty)
+    return logger(ok(cont), pty)
 
 def _close(pty):
     command = [
@@ -214,11 +217,11 @@ def main(ctfd, list_tty):
             if (stdin == COMMAND[0]):
                 pool = ThreadPool(processes=1)
                 async_result = pool.apply_async(ctfd.login, ())
-                _thread.start_new_thread( logging, (async_result.get(), lty) )
+                _thread.start_new_thread( logger, (async_result.get(), lty) )
             elif (stdin == COMMAND[1]):
                 pool = ThreadPool(processes=1)
                 async_result = pool.apply_async(ctfd.logout, ())
-                _thread.start_new_thread( logging, (async_result.get(), lty) )
+                _thread.start_new_thread( logger, (async_result.get(), lty) )
             elif (COMMAND[2] in stdin):
                 _thread.start_new_thread( scoreb.show, () )
             elif (stdin == COMMAND[3]):
@@ -229,23 +232,23 @@ def main(ctfd, list_tty):
                 if (COMMAND[5] in stdin):
                     if (ctfd.lstatus):
                         flag = posinput('Enter the flag')
-                        _thread.start_new_thread( logging, (ctfd.submit_flag(flag, cate, chal, chal_id), cty, ) ) 
+                        _thread.start_new_thread( logger, (ctfd.submit_flag(flag, cate, chal, chal_id), cty, ) ) 
                     else:
-                        _thread.start_new_thread( logging, (warn('[!] Your not login yet'), cty) )
+                        _thread.start_new_thread( logger, (warn('[!] Your not login yet'), cty) )
             elif (COMMAND[6] in stdin):
                 pool = ThreadPool(processes=1)
                 for call in ['ctfd.get_scoreboard','ctfd.get_challenges']:
                     async_result = pool.apply_async(eval(call), ())
-                    _thread.start_new_thread( logging, (async_result.get(), lty) )
+                    _thread.start_new_thread( logger, (async_result.get(), lty) )
             elif (stdin == COMMAND[7]):
-                logging(warn('[-] TODO : Add download functional'), lty)
+                logger(warn('[-] TODO : Add download functional'), lty)
                 # _, num, link = stdin.split(':')
                 # pool = ThreadPool(processes=1)
                 # async_result = pool.apply_async(ctfd.download, (num, name, category, link) )
-                # _thread.start_new_thread( logging, (async_result.get(), lty) )
+                # _thread.start_new_thread( logger, (async_result.get(), lty) )
             elif (stdin == COMMAND[8]):
                 for ty in list_tty:
-                    _thread.start_new_thread( logging, ("", ty, ) )
+                    _thread.start_new_thread( logger, ("", ty, ) )
             elif (stdin == COMMAND[9]):
                 _thread.start_new_thread( eval(stdin), (lty, ) )
             elif (stdin == COMMAND[10]):
@@ -268,7 +271,7 @@ if __name__ == '__main__':
             ctfd, list_tty = ctfdapi(arghandler()), list_tty.setup()
             main(ctfd, list_tty)
         else:
-            print(warn('[!] tmux session not found...'))
+            logging.info(warn('[!] tmux session not found...'))
     except Exception as e:
         print(err(e))
         exit(_close(list_tty))
