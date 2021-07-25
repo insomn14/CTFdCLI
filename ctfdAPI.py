@@ -101,7 +101,7 @@ class ctfdapi:
         return id
 
     def __get_hints(self, hints_id):
-        logging.info(f"GET CHALL HINT_ID : {hint_id}")
+        logging.info(f"GET CHALL HINT_ID : {hints_id}")
         recv = pd.read_json(self.session.get(f'{self.hint_url}/{hints_id}').text).data
         if ('content' in recv.keys()):
             return recv.content
@@ -119,9 +119,8 @@ class ctfdapi:
             challenges = pd.DataFrame(columns=key)
             for ids in id_chals:
                 try:
-                    # recv = pd.read_json(self.session.get(f'{self.chall_url}/{ids}').content)['data']
-                    recv = self.session.get(f'{self.chall_url}/{ids}')
                     logging.info(f'STATUS : {recv.status_code} - {self.chall_url}/{ids}')
+                    recv = self.session.get(f'{self.chall_url}/{ids}')
                     recv = pd.read_json(recv.content)['data']
                     if (len(recv.hints) != 0):
                         hdata = []
