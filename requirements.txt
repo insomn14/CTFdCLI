@@ -13,6 +13,7 @@ idna==2.10
 lxml==4.6.3
 mega.py==1.0.8
 outcome==1.1.0
+pandas==2.2.2
 pathlib==1.0.1
 PySocks==1.7.1
 python-dateutil==2.8.1
